@@ -1,12 +1,19 @@
+<style>
+    td {
+        border: solid 1px;
+        font-size: 24px;
+    }
+</style>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue"></script>
 <script>
     var data;
     var lspeed = 0.8;
-    var llvl = 3000;
+    var llvl = 5000;
     var ro2 = 0;
     var timer_to_redraw;
-    rund = () => Math.random() * 2 - 1;
+    rund = () => (Math.random()-0.5) * 10;
+    //rund = () => 0;
     var w = {
         n1: {
             i1: rund(),
@@ -23,13 +30,15 @@
             n2: rund(),
             b: rund(),
         },
-        f:(e) => 1 / (1 + e),
-        fd:(e) => e * (1 - e)
+        f: (ex) => 1 / (1 + ex),
+        fd: (fx) => fx * (1 - fx)
     };
-         //f = (e) => 1 / (1 + e);
-        //fd = (e) => e / Math.pow((1 + e), 2);
-        //fd = (e) => e * (1 - e);
-        //fd = (e) => 1/(1+e) ;
+    w.fs = w.f.toString();
+    w.fds = w.fd.toString();
+    //f = (e) => 1 / (1 + e);
+    //fd = (e) => e / Math.pow((1 + e), 2);
+    //fd = (e) => e * (1 - e);
+    //fd = (e) => 1/(1+e) ;
     var in_data = [
         [0, 0],
         [0, 1],
@@ -41,12 +50,10 @@
         if (null == obj || "object" != typeof obj) return obj;
         var copy = obj.constructor();
         for (var attr in obj) {
-
             if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
         }
         return copy;
     }
-
 
     /*var w = {
         n1: {
@@ -118,76 +125,58 @@
         v.i1 = rd[0];
         v.i2 = rd[1];
         v.check_res = v.i1 ^ v.i2;
-       
+
         v.n1 = {};
         v.n2 = {};
         v.out = {};
-
-
         v.n1.sum = v.i1 * w.n1.i1 + v.i2 * w.n1.i2 + w.n1.b;
         v.n1.e = Math.exp(-v.n1.sum);
-        v.n1.f =  w.f(v.n1.e);
-
+        v.n1.f = w.f(v.n1.e);
         v.n2.sum = v.i1 * w.n2.i1 + v.i2 * w.n2.i2 + w.n2.b;
         v.n2.e = Math.exp(-v.n2.sum);
         v.n2.f = w.f(v.n2.e);
-
-
         v.out.sum = v.n1.f * w.out.n1 + v.n2.f * w.out.n2 + w.out.b;
         v.out.e = Math.exp(-v.out.sum);
-        v.out.f =  w.f(v.out.e);
-
+        v.out.f = w.f(v.out.e);
         v.out.dif = v.check_res - v.out.f;
         v.n1.dif = v.out.dif * w.out.n1;
         v.n2.dif = v.out.dif * w.out.n2;
-
-        v.out.fd =  w.fd(v.out.f);
+        v.out.fd = w.fd(v.out.f);
         v.out.wd = v.out.fd * v.out.dif * lspeed;
         w.out.b += v.out.wd;
         w.out.n1 += v.out.wd * v.n1.f;
         w.out.n2 += v.out.wd * v.n2.f;
-
-        v.n1.fd =  w.fd(v.n1.f);
+        v.n1.fd = w.fd(v.n1.f);
         v.n1.wd = v.n1.fd * v.n1.dif * lspeed;
         w.n1.b += v.n1.wd;
         w.n1.i1 += v.n1.wd * v.i1;
         w.n1.i2 += v.n1.wd * v.i2;
-
-        v.n2.fd =  w.fd(v.n2.f);
+        v.n2.fd = w.fd(v.n2.f);
         v.n2.wd = v.n2.fd * v.n2.dif * lspeed;
         w.n2.b += v.n2.wd;
         w.n2.i1 += v.n2.wd * v.i1;
         w.n2.i2 += v.n2.wd * v.i2;
         l = {w: clone(w), v: v};
         log.push(l);
-
-
         step = llvl > 1000 ? (llvl / 1000) : 1;
         ro2++;
         //console.log(ro2);
         if (ro2 % step === 0) {
             drow(v)
         }
-
     }
-
-
 </script>
 <!--<script type="text/javascript">
     google.charts.load('current', {'packages': ['corechart']});
     google.charts.setOnLoadCallback(drawChart);
-
     function drawChart() {
         var data = google.visualization.arrayToDataTable(graf);
-
         var options = {
             title: 'Company Performance',
             curveType: 'function',
             legend: {position: 'bottom'}
         };
-
         var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
-
         chart.draw(data, options);
     }
 </script>
@@ -195,22 +184,18 @@
 <script type="text/javascript">
     google.charts.load('current', {'packages': ['line']});
     google.charts.setOnLoadCallback(ChartInit);
-
     var chart;
     var options;
 
     function ChartInit() {
         data = new google.visualization.DataTable();
-
         data.addColumn('number', 'learn');
         data.addColumn('number', '0^0');
         data.addColumn('number', '0^1');
         data.addColumn('number', '1^0');
         data.addColumn('number', '1^1');
         data.addColumn('number', 'avg');
-
         options = {
-
             width: document.body.clientWidth - 100,
             height: 500,
             axes: {
@@ -219,57 +204,54 @@
                 }
             }
         };
-
         chart = new google.charts.Line(document.getElementById('line_top_x'));
-
         for (let i = 0; i < llvl; i++) {
             learn();
         }
     }
-
 </script>
 <body>
 <div id="line_top_x" style="width: 2000px; height: 500px"></div>
-    <div id="app">
-<table >
-    <tr>
-        <td></td>
-        <td>in 1</td>
-        <td>in 2</td>
-        <td>b</td>
-    </tr>
-    <tr>
-        <td>n1</td>
-        <td>{{ n1.i1 }}</td>
-        <td>{{ n1.i2 }}</td>
-        <td>{{ n1.b }}</td>
-    </tr>
-    <tr>
-        <td>n2</td>
-        <td>{{ n2.i1 }}</td>
-        <td>{{ n2.i2 }}</td>
-        <td>{{ n2.b }}</td>
-    </tr>
-    <tr>
-        <td>out</td>
-        <td>{{ out.n1 }}</td>
-        <td>{{ out.n2 }}</td>
-        <td>{{ out.b }}</td>
-    </tr>
-</table>
-    <div >{{ f }}</div>
-    <div >{{ df }}</div>
-        </div>
+<div id="app">
+    <table>
+        <tr>
+            <td></td>
+            <td>in 1</td>
+            <td>in 2</td>
+            <td>b</td>
+        </tr>
+        <tr>
+            <td>n1</td>
+            <td>{{ n1.i1 }}</td>
+            <td>{{ n1.i2 }}</td>
+            <td>{{ n1.b }}</td>
+        </tr>
+        <tr>
+            <td>n2</td>
+            <td>{{ n2.i1 }}</td>
+            <td>{{ n2.i2 }}</td>
+            <td>{{ n2.b }}</td>
+        </tr>
+        <tr>
+            <td>out</td>
+            <td>{{ out.n1 }}</td>
+            <td>{{ out.n2 }}</td>
+            <td>{{ out.b }}</td>
+        </tr>
+        <tr>
+            <td>Функция активации:</td>
+            <td>{{ fs }}</td>
+        </tr>
+        <tr>
+            <td>Функция обратного распростронения ошибки:</td>
+            <td>{{ fds }}</td>
+        </tr>
+    </table>
+</div>
 <script>
     var app = new Vue({
         el: '#app',
-        data:  w
+        data: w
     })
 </script>
-<style>
-    td{
-        border: solid 1px;
-        font-size: 24px;
-    }
-</style>
 </body>
