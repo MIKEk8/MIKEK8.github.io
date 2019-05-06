@@ -155,6 +155,8 @@
         w.n2.b += v.n2.wd;
         w.n2.i1 += v.n2.wd * v.i1;
         w.n2.i2 += v.n2.wd * v.i2;
+        w.f = f;
+        w.fd = fd;
         l = {w: clone(w), v: v};
         log.push(l);
 
@@ -253,6 +255,8 @@
         <td>{{ out.b }}</td>
     </tr>
 </table>
+    <div >{{ f }}</div>
+    <div >{{ df }}</div>
 <script>
     var app = new Vue({
         el: '#app',
