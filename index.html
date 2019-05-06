@@ -22,8 +22,14 @@
             n1: rund(),
             n2: rund(),
             b: rund(),
-        }
+        },
+        f:(e) => 1 / (1 + e),
+        fd:(e) => e * (1 - e)
     };
+         //f = (e) => 1 / (1 + e);
+        //fd = (e) => e / Math.pow((1 + e), 2);
+        //fd = (e) => e * (1 - e);
+        //fd = (e) => 1/(1+e) ;
     var in_data = [
         [0, 0],
         [0, 1],
@@ -112,10 +118,7 @@
         v.i1 = rd[0];
         v.i2 = rd[1];
         v.check_res = v.i1 ^ v.i2;
-        f = (e) => 1 / (1 + e);
-        //fd = (e) => e / Math.pow((1 + e), 2);
-        fd = (e) => e * (1 - e);
-        //fd = (e) => 1/(1+e) ;
+       
         v.n1 = {};
         v.n2 = {};
         v.out = {};
@@ -123,40 +126,38 @@
 
         v.n1.sum = v.i1 * w.n1.i1 + v.i2 * w.n1.i2 + w.n1.b;
         v.n1.e = Math.exp(-v.n1.sum);
-        v.n1.f = f(v.n1.e);
+        v.n1.f =  w.f(v.n1.e);
 
         v.n2.sum = v.i1 * w.n2.i1 + v.i2 * w.n2.i2 + w.n2.b;
         v.n2.e = Math.exp(-v.n2.sum);
-        v.n2.f = f(v.n2.e);
+        v.n2.f = w.f(v.n2.e);
 
 
         v.out.sum = v.n1.f * w.out.n1 + v.n2.f * w.out.n2 + w.out.b;
         v.out.e = Math.exp(-v.out.sum);
-        v.out.f = f(v.out.e);
+        v.out.f =  w.f(v.out.e);
 
         v.out.dif = v.check_res - v.out.f;
         v.n1.dif = v.out.dif * w.out.n1;
         v.n2.dif = v.out.dif * w.out.n2;
 
-        v.out.fd = fd(v.out.f);
+        v.out.fd =  w.fd(v.out.f);
         v.out.wd = v.out.fd * v.out.dif * lspeed;
         w.out.b += v.out.wd;
         w.out.n1 += v.out.wd * v.n1.f;
         w.out.n2 += v.out.wd * v.n2.f;
 
-        v.n1.fd = fd(v.n1.f);
+        v.n1.fd =  w.fd(v.n1.f);
         v.n1.wd = v.n1.fd * v.n1.dif * lspeed;
         w.n1.b += v.n1.wd;
         w.n1.i1 += v.n1.wd * v.i1;
         w.n1.i2 += v.n1.wd * v.i2;
 
-        v.n2.fd = fd(v.n2.f);
+        v.n2.fd =  w.fd(v.n2.f);
         v.n2.wd = v.n2.fd * v.n2.dif * lspeed;
         w.n2.b += v.n2.wd;
         w.n2.i1 += v.n2.wd * v.i1;
         w.n2.i2 += v.n2.wd * v.i2;
-        w.f = f.toString();
-        w.fd = fd.toString();
         l = {w: clone(w), v: v};
         log.push(l);
 
