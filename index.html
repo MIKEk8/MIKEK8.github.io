@@ -2,13 +2,16 @@
     var context = new AudioContext();
 var oscillator = context.createOscillator();
 oscillator.type = 'sine'; // форма сигнала
-oscillator.frequency.value = 500; // частота
+    i=1024;
+oscillator.frequency.value = i; // частота
 oscillator.connect(context.destination);
 // oscillator.start(); для запуска
 // oscillator.stop(); для завершения
     </script>
-<button onclick="oscillator.start();">
-  <button onclick="oscillator.stop();">  
+<button onclick="oscillator.start();">start</button>
+  <button onclick="oscillator.stop();">  stop</button>
+  <button onclick="i=i*2;oscillator.frequency.value = i;">  up</button>
+  <button onclick="i=i/2;oscillator.frequency.value = i;">  down</button>
 <style>
     td {
         border: solid 1px;
