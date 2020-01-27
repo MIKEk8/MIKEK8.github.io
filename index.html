@@ -1,3 +1,14 @@
+<script>
+    var context = new AudioContext();
+var oscillator = context.createOscillator();
+oscillator.type = 'sine'; // форма сигнала
+oscillator.frequency.value = 500; // частота
+oscillator.connect(context.destination);
+// oscillator.start(); для запуска
+// oscillator.stop(); для завершения
+    </script>
+<button onclick="oscillator.start();">
+  <button onclick="oscillator.stop();">  
 <style>
     td {
         border: solid 1px;
