@@ -1,0 +1,31 @@
+<script>
+    var context = new AudioContext();
+    function playnote(note, len) {
+        var oscillator = context.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = note;
+        oscillator.connect(context.destination);
+        oscillator.start();
+        setTimeout(function () {
+            oscillator.disconnect(context.destination);
+            oscillator.stop();
+        }, len);
+    }
+</script>
+<button onclick="playnote(262,1000);">do</button>
+<button onclick="playnote(277,1000);">do de</button>
+<button onclick="playnote(294,1000);">re</button>
+<button onclick="playnote(311,1000);">re de</button>
+<button onclick="playnote(330,1000);">me</button>
+<button onclick="playnote(349,1000);">fa</button>
+<button onclick="playnote(370,1000);">fa de</button>
+<button onclick="playnote(392,1000);">sol</button>
+<button onclick="playnote(415,1000);">sol de</button>
+<button onclick="playnote(440,1000);">lya</button>
+<button onclick="playnote(466,1000);">lya de</button>
+<button onclick="playnote(494,1000);">si</button>
+
+<button onclick="playnote(523,1000);">do</button>
+<button onclick="playnote(554,1000);">do de</button>
+<button onclick="playnote(587,1000);">re</button>
+<button onclick="playnote(622,1000);">re de</button>

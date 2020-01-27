@@ -1,22 +1,3 @@
-<script>
-    var context = new AudioContext();
-var oscillator = context.createOscillator();
-oscillator.type = 'sine'; // форма сигнала
-    i=1024;
-oscillator.frequency.value = i; // частота
-oscillator.connect(context.destination);
-// oscillator.start(); для запуска
-// oscillator.stop(); для завершения
-    </script>
-<button onclick="oscillator.start();">start</button>
-  <button onclick="oscillator.stop();">  stop</button>
-  <button onclick="i=i*2;oscillator.frequency.value = i;">  up</button>
-  <button onclick="i=i/2;oscillator.frequency.value = i;">  down</button>
-
-  <button onclick="oscillator.type = 'sine';">  type sin</button>
-  <button onclick="oscillator.type = 'square';">  type square</button>
-  <button onclick="oscillator.type = 'sawtooth';">  type sawtooth</button>
-  <button onclick="oscillator.type = 'triangle';">  type triangle</button>
 <style>
     td {
         border: solid 1px;
@@ -52,7 +33,7 @@ oscillator.connect(context.destination);
         },
         f: (ex) => 1 / (1 + ex),
         fd: (fx) => fx * (1 - fx),
-        step:0
+        step: 0
         //fd: (fx) => fx / Math.pow((1 + fx), 2)
         //fd: (fx) => 1/(1+fx)
     };
@@ -229,9 +210,9 @@ oscillator.connect(context.destination);
 
 
         //chart.prototype.onclick = (e,w)=>console.log(e) && console.log(w);
-        google.visualization.events.addListener(chart, 'select', function() {
-            let i = (chart.getSelection().length === 1)[0].row*4;
-            console.log(i!==null?log[i]:log[log.length-1]);
+        google.visualization.events.addListener(chart, 'select', function () {
+            let i = (chart.getSelection().length === 1)[0].row * 4;
+            console.log(i !== null ? log[i] : log[log.length - 1]);
         });
         //google.visualization.events.addListener(chart, 'click', (e) => console.log(chart.getSelection()));
         for (let i = 0; i < llvl; i++) {
