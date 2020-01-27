@@ -12,6 +12,11 @@ oscillator.connect(context.destination);
   <button onclick="oscillator.stop();">  stop</button>
   <button onclick="i=i*2;oscillator.frequency.value = i;">  up</button>
   <button onclick="i=i/2;oscillator.frequency.value = i;">  down</button>
+
+  <button onclick="oscillator.type = 'sine';">  type sin</button>
+  <button onclick="oscillator.type = 'square';">  type square</button>
+  <button onclick="oscillator.type = 'sawtooth';">  type sawtooth</button>
+  <button onclick="oscillator.type = 'triangle';">  type triangle</button>
 <style>
     td {
         border: solid 1px;
