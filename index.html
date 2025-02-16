@@ -1,189 +1,95 @@
 <style>
     td {
-        border: solid 1px;
+        border: solid 1px black;
+        border-collapse: collapse;
+        padding: 5px;
         font-size: 24px;
     }
 </style>
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+
 <script>
     google.charts.load('current', {'packages': ['annotationchart']});
+    
     var data;
     var lspeed = 4;
     var llvl = 2000;
     var ro2 = 0;
     var timer_to_redraw;
-    rund = () => (Math.random() - 0.5) * 10;
-    //rund = () => 0;
-    var w = {
-        n1: {
-            i1: rund(),
-            i2: rund(),
-            b: rund(),
-        },
-        n2: {
-            i1: rund(),
-            i2: rund(),
-            b: rund(),
-        },
-        out: {
-            n1: rund(),
-            n2: rund(),
-            b: rund(),
-        },
-        f: (ex) => 1 / (1 + ex),
-        fd: (fx) => fx * (1 - fx),
-        step: 0
-        //fd: (fx) => fx / Math.pow((1 + fx), 2)
-        //fd: (fx) => 1/(1+fx)
-    };
-    //f = (e) => 1 / (1 + e);
-    //fd = (e) => e / Math.pow((1 + e), 2);
-    //fd = (e) => e * (1 - e);
-    //fd = (e) => 1/(1+e) ;
-    var in_data = [
-        [0, 0],
-        [0, 1],
-        [1, 0],
-        [1, 1],
-    ];
 
-    function clone(obj) {
-        if (null == obj || "object" != typeof obj) return obj;
-        var copy = obj.constructor();
-        for (var attr in obj) {
-            if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
-        }
-        return copy;
+    function rund() {
+        return (Math.random() - 0.5) * 10;
     }
 
-    /*var w = {
-        n1: {
-            i1: 6.8,
-            i2: 6.4,
-            b: -2.6,
-        },
-        n2: {
-            i1: -4.5,
-            i2: -5.4,
-            b: 7.4,
-        },
-        out: {
-            n1: 6,
-            n2: 5.8,
-            b: -8.5,
-        }
-    };*/
-    /*var w = {
-        n1: {
-            i1: -1,
-            i2: 1,
-            b: -1,
-        },
-        n2: {
-            i1: 1,
-            i2: -1,
-            b: 1,
-        },
-        out: {
-            n1: 1,
-            n2: 1,
-            b: -1,
-        }
-    };*/
-    var oldW = clone(w);
+    var w = {
+        n1: { i1: rund(), i2: rund(), b: rund() },
+        n2: { i1: rund(), i2: rund(), b: rund() },
+        out: { n1: rund(), n2: rund(), b: rund() },
+        f: (x) => 1 / (1 + Math.exp(-x)),  // Исправленная сигмоида
+        fd: (fx) => fx * (1 - fx),
+        step: 0
+    };
+
+    var oldW = JSON.parse(JSON.stringify(w));
     var log = [];
-    var last_value = {
-        "a00": 0.5,
-        "a01": 0.5,
-        "a10": 0.5,
-        "a11": 0.5,
-    };
-    drow = () => {
-        //if (data.getNumberOfRows() > 1000) data.removeRow(0);
-        lv = Object.values(last_value);
-        /*last_value  = {
-            "a00": 0,
-            "a01": 0,
-            "a10": 0,
-            "a11": 0,
-        };*/
-        lv.push(lv.reduce((partial_sum, a) => partial_sum + a) / 4);
+    var last_value = { "a00": 0.5, "a01": 0.5, "a10": 0.5, "a11": 0.5 };
+
+    function draw() {
+        let lv = Object.values(last_value);
+        lv.push(lv.reduce((sum, a) => sum + a) / 4);
         lv.unshift(new Date(parseInt(ro2)));
-
         data.addRow(lv);
-        if (timer_to_redraw) {
-            clearTimeout(timer_to_redraw);
-        }
-        timer_to_redraw = setTimeout(() => chart.draw(data, google.charts.Line.convertOptions(options)), 200);
-    };
 
-    function load(id) {
-        w = clone(log[id].w);
+        if (timer_to_redraw) clearTimeout(timer_to_redraw);
+        timer_to_redraw = setTimeout(() => chart.draw(data, google.charts.Line.convertOptions(options)), 200);
     }
 
     function learn(rd = null) {
-        let v = {};
-        v.i1 = Math.round(Math.random());
-        v.i2 = Math.round(Math.random());
-        if (rd === null)
-            rd = in_data[ro2 % in_data.length];
-        else
-            rd = in_data[rd];
-        v.i1 = rd[0];
-        v.i2 = rd[1];
+        let v = { i1: Math.round(Math.random()), i2: Math.round(Math.random()) };
+        if (!rd) rd = [v.i1, v.i2];
         v.check_res = v.i1 ^ v.i2;
 
-        v.n1 = {};
-        v.n2 = {};
-        v.out = {};
+        v.n1 = {}, v.n2 = {}, v.out = {};
+
         v.n1.sum = v.i1 * w.n1.i1 + v.i2 * w.n1.i2 + w.n1.b;
-        v.n1.e = Math.exp(-v.n1.sum);
-        v.n1.f = w.f(v.n1.e);
+        v.n1.f = w.f(v.n1.sum);
         v.n2.sum = v.i1 * w.n2.i1 + v.i2 * w.n2.i2 + w.n2.b;
-        v.n2.e = Math.exp(-v.n2.sum);
-        v.n2.f = w.f(v.n2.e);
+        v.n2.f = w.f(v.n2.sum);
         v.out.sum = v.n1.f * w.out.n1 + v.n2.f * w.out.n2 + w.out.b;
-        v.out.e = Math.exp(-v.out.sum);
-        v.out.f = w.f(v.out.e);
+        v.out.f = w.f(v.out.sum);
+
         v.out.dif = v.check_res - v.out.f;
         v.n1.dif = v.out.dif * w.out.n1;
         v.n2.dif = v.out.dif * w.out.n2;
+
         v.out.fd = w.fd(v.out.f);
         v.out.wd = v.out.fd * v.out.dif * lspeed;
         w.out.b += v.out.wd;
         w.out.n1 += v.out.wd * v.n1.f;
         w.out.n2 += v.out.wd * v.n2.f;
+
         v.n1.fd = w.fd(v.n1.f);
         v.n1.wd = v.n1.fd * v.n1.dif * lspeed;
         w.n1.b += v.n1.wd;
         w.n1.i1 += v.n1.wd * v.i1;
         w.n1.i2 += v.n1.wd * v.i2;
+
         v.n2.fd = w.fd(v.n2.f);
         v.n2.wd = v.n2.fd * v.n2.dif * lspeed;
         w.n2.b += v.n2.wd;
         w.n2.i1 += v.n2.wd * v.i1;
         w.n2.i2 += v.n2.wd * v.i2;
-        l = {w: clone(w), v: v};
-        w.step = ro2;
-        log.push(l);
-        //step = llvl > 1000 ? (llvl / 1000) : 1;
-        ro2++;
-        //console.log(ro2);
-        last_value['a' + v.i1.toString() + v.i2.toString()] = v.out.dif;
-        if (ro2 % 4 === 0) {
-            drow(v)
-        }
-        lv = Object.values(last_value);
-        if (Math.abs(lv.reduce((s, a) => Math.abs(a) > Math.abs(s) ? a : s)) > 0.1) return false; else return true;
-    }
-</script>
 
-<script type="text/javascript">
-    google.charts.load('current', {'packages': ['line']});
-    google.charts.setOnLoadCallback(ChartInit);
-    var chart;
-    var options;
+        log.push({ w: JSON.parse(JSON.stringify(w)), v });
+
+        ro2++;
+        last_value[`a${v.i1}${v.i2}`] = v.out.dif;
+        if (ro2 % 4 === 0) draw();
+
+        return Math.abs(Math.max(...Object.values(last_value))) <= 0.1;
+    }
 
     function ChartInit() {
         data = new google.visualization.DataTable();
@@ -193,77 +99,35 @@
         data.addColumn('number', '1^0');
         data.addColumn('number', '1^1');
         data.addColumn('number', 'avg');
+
         options = {
             width: document.body.clientWidth - 10,
             height: 500,
-            axes: {
-                x: {
-                    0: {side: 'top'}
-                }
-            },
-            explorer: {axis: 'horizontal', maxZoomIn: .02},
-            legend: {maxLines: 10},
-            vAxis: {viewWindow: {min: -1, max: 1}}
+            explorer: { axis: 'horizontal', maxZoomIn: .02 },
+            legend: { maxLines: 10 },
+            vAxis: { viewWindow: { min: -1, max: 1 } }
         };
-        //chart = new google.charts.Line(document.getElementById('line_top_x'));
+
         chart = new google.visualization.AnnotationChart(document.getElementById('line_top_x'));
 
-
-        //chart.prototype.onclick = (e,w)=>console.log(e) && console.log(w);
-        google.visualization.events.addListener(chart, 'select', function () {
-            let i = (chart.getSelection().length === 1)[0].row * 4;
-            console.log(i !== null ? log[i] : log[log.length - 1]);
-        });
-        //google.visualization.events.addListener(chart, 'click', (e) => console.log(chart.getSelection()));
         for (let i = 0; i < llvl; i++) {
-            if (learn()) {
-                return;
-            }
+            if (learn()) break;
         }
     }
-</script>
-<body style="margin: 0;border: 0;">
-<div id="line_top_x"></div>
-<div id="app">
-    <table>
-        <tr>
-            <td>{{step}}</td>
-            <td>in 1</td>
-            <td>in 2</td>
-            <td>b</td>
-        </tr>
-        <tr>
-            <td>n1</td>
-            <td>{{ n1.i1 }}</td>
-            <td>{{ n1.i2 }}</td>
-            <td>{{ n1.b }}</td>
-        </tr>
-        <tr>
-            <td>n2</td>
-            <td>{{ n2.i1 }}</td>
-            <td>{{ n2.i2 }}</td>
-            <td>{{ n2.b }}</td>
-        </tr>
-        <tr>
-            <td>out</td>
-            <td>{{ out.n1 }}</td>
-            <td>{{ out.n2 }}</td>
-            <td>{{ out.b }}</td>
-        </tr>
-        <tr>
-            <td>Функция активации:</td>
-            <td>{{ f.toString() }}</td>
-        </tr>
-        <tr>
-            <td>Функция обратного распростронения ошибки:</td>
-            <td>{{ fd.toString() }}</td>
-        </tr>
-    </table>
-</div>
-<script>
+
+    google.charts.setOnLoadCallback(ChartInit);
+
     var app = new Vue({
         el: '#app',
-        data: w
-    })
+        data: () => ({ ...w })
+    });
 </script>
+
+<body>
+    <div id="line_top_x"></div>
+    <div id="app">
+        <table>
+            <tr><td>{{ step }}</td></tr>
+        </table>
+    </div>
 </body>
