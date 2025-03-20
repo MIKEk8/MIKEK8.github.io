@@ -110,7 +110,7 @@ async function animatePath(path, color) {
     for (let [x, y] of path) {
         ctx.fillStyle = color;
         ctx.fillRect(y * cellSize, x * cellSize, cellSize, cellSize);
-        await new Promise(resolve => setTimeout(resolve, 20));
+        await new Promise(resolve => setTimeout(resolve, 40));
     }
 }
 
