@@ -24,25 +24,48 @@
 <body>
     <canvas id="mazeCanvas"></canvas>
     <script>
-        const size = 21;
+        function getQueryParam(name, defaultValue) {
+            const params = new URLSearchParams(window.location.search);
+            const value = parseInt(params.get(name));
+            return isNaN(value) || value < 21 || value % 2 === 0 ? defaultValue : value;
+        }
+
+        const size = getQueryParam("size", 41);
         const cellSize = 20;
         const canvas = document.getElementById("mazeCanvas");
         const ctx = canvas.getContext("2d");
         canvas.width = size * cellSize;
         canvas.height = size * cellSize;
+        let start = [1, 1];
         
+        function getRandomCorner(exclude) {
+            const corners = [
+                [1, 1], [1, size - 2], 
+                [size - 2, 1], [size - 2, size - 2]
+            ].filter(corner => !(corner[0] === exclude[0] && corner[1] === exclude[1]));
+            return corners[Math.floor(Math.random() * corners.length)];
+        }
+        
+        let end = getRandomCorner(start);
+
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
         function generateMaze(size) {
             let maze = Array.from({ length: size }, () => Array(size).fill(1));
-            let stack = [[1, 1]];
-            maze[1][1] = 0;
+            return dfsMaze(maze, size);
+        }
+
+        function dfsMaze(maze, size) {
+            let stack = [start];
+            maze[start[0]][start[1]] = 0;
             let directions = [[0, 2], [2, 0], [-2, 0], [0, -2]];
             
             while (stack.length > 0) {
                 let [x, y] = stack[stack.length - 1];
-                let shuffledDirs = directions.sort(() => Math.random() - 0.5);
                 let moved = false;
-                
-                for (let [dx, dy] of shuffledDirs) {
+                for (let [dx, dy] of shuffle(directions)) {
                     let nx = x + dx, ny = y + dy;
                     if (nx > 0 && nx < size - 1 && ny > 0 && ny < size - 1 && maze[nx][ny] === 1) {
                         maze[nx][ny] = 0;
@@ -56,7 +79,7 @@
             }
             return maze;
         }
-        
+
         function drawMaze(maze) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let i = 0; i < size; i++) {
@@ -65,28 +88,22 @@
                     ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
                 }
             }
+            ctx.fillStyle = "#27ae60";
+            ctx.fillRect(start[1] * cellSize, start[0] * cellSize, cellSize, cellSize);
             
-            // Отмечаем старт и финиш контрастными цветами
-            ctx.fillStyle = "#27ae60"; // Яркий зелёный для входа
-            ctx.beginPath();
-            ctx.arc(1 * cellSize + cellSize / 2, 1 * cellSize + cellSize / 2, cellSize / 3, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = "#e74c3c"; // Яркий красный для выхода
-            ctx.beginPath();
-            ctx.arc((size - 2) * cellSize + cellSize / 2, (size - 2) * cellSize + cellSize / 2, cellSize / 3, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillStyle = "#e74c3c";
+            ctx.fillRect(end[1] * cellSize, end[0] * cellSize, cellSize, cellSize);
         }
-        
+
         function solveMaze(maze) {
             let path = [];
             let visited = Array.from({ length: size }, () => Array(size).fill(false));
             
             function dfs(x, y) {
-                if (x === size - 2 && y === size - 2) return true;
+                if (x === end[0] && y === end[1]) return true;
                 visited[x][y] = true;
                 path.push([x, y]);
-                let directions = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+                let directions = shuffle([[1, 0], [0, 1], [-1, 0], [0, -1]]);
                 for (let [dx, dy] of directions) {
                     let nx = x + dx, ny = y + dy;
                     if (nx > 0 && nx < size && ny > 0 && ny < size && maze[nx][ny] === 0 && !visited[nx][ny]) {
@@ -96,33 +113,33 @@
                 path.pop();
                 return false;
             }
-            dfs(1, 1);
+            dfs(start[0], start[1]);
             return path;
         }
-        
-        function animatePath(path, callback) {
+
+        function animatePath(path) {
             let i = 0;
             function step() {
                 if (i < path.length) {
                     let [x, y] = path[i];
-                    if ((x !== 1 || y !== 1) && (x !== size - 2 || y !== size - 2)) {
-                        ctx.fillStyle = `rgba(0, 176, 255, ${0.7 + 0.3 * (i / path.length)})`;
-                        ctx.fillRect(y * cellSize, x * cellSize, cellSize, cellSize);
-                    }
+                    ctx.fillStyle = "#3498db";
+                    ctx.fillRect(y * cellSize, x * cellSize, cellSize, cellSize);
                     i++;
-                    setTimeout(step, 40);
+                    setTimeout(step, 50);
                 } else {
-                    setTimeout(callback, 500);
+                    start = [...end];
+                    end = getRandomCorner(start);
+                    setTimeout(generateAndSolve, 200);
                 }
             }
             step();
         }
-        
+
         function generateAndSolve() {
             let maze = generateMaze(size);
             drawMaze(maze);
             let path = solveMaze(maze);
-            animatePath(path, generateAndSolve);
+            animatePath(path);
         }
         
         generateAndSolve();
