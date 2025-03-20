@@ -137,13 +137,13 @@ function animatePath(path) {
             } else {
                 expandSquare(cx, cy);
                 i++;
-                setTimeout(drawStep, 50);
+                setTimeout(drawStep, 10);
             }
         }
 
         function expandSquare(x, y) {
             let expandProgress = 5;
-            const expandSteps = 40;
+            const expandSteps = 20;
 
             function drawSquare() {
                 expandProgress++;
