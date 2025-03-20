@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Multi-Path Maze Solver</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+            margin: 0;
+        }
+        canvas {
+            border: 4px solid white;
+            box-shadow: 0px 0px 20px rgba(255, 255, 255, 0.5);
+            display: block;
+            background-color: #111;
+        }
+    </style>
+</head>
+<body>
+<canvas id="mazeCanvas"></canvas>
+<script>
+const size = 41;
+const cellSize = 15;
+const canvas = document.getElementById("mazeCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = size * cellSize;
+canvas.height = size * cellSize;
+
+const corners = { A: [1, 1], B: [1, size - 2], C: [size - 2, 1], D: [size - 2, size - 2] };
+
+const paths = [
+    { from: 'A', to: 'D', color: '#e74c3c' },
+//    { from: 'C', to: 'C', color: '#27ae60' },
+    { from: 'B', to: 'C', color: '#f1c40f' },
+//    { from: 'B', to: 'D', color: '#9b59b6' },
+//    { from: 'C', to: 'D', color: '#3498db' },
+//    { from: 'D', to: 'A', color: '#e67e22' }
+];
+
+function shuffle(array) {
+    return array.sort(() => Math.random() - 0.5);
+}
+
+function generateMaze(size) {
+    let maze = Array.from({ length: size }, () => Array(size).fill(1));
+    let stack = [corners.A];
+    maze[corners.A[0]][corners.A[1]] = 0;
+    let directions = [[0, 2], [2, 0], [-2, 0], [0, -2]];
+
+    while (stack.length > 0) {
+        let [x, y] = stack[stack.length - 1];
+        let moved = false;
+        for (let [dx, dy] of shuffle(directions)) {
+            let nx = x + dx, ny = y + dy;
+            if (nx > 0 && nx < size - 1 && ny > 0 && ny < size - 1 && maze[nx][ny] === 1) {
+                maze[nx][ny] = 0;
+                maze[x + dx / 2][y + dy / 2] = 0;
+                stack.push([nx, ny]);
+                moved = true;
+                break;
+            }
+        }
+        if (!moved) stack.pop();
+    }
+    return maze;
+}
+
+function drawMaze(maze) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            ctx.fillStyle = maze[i][j] === 1 ? "#2c3e50" : "#ecf0f1";
+            ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+        }
+    }
+    Object.values(corners).forEach(([x, y]) => {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(y * cellSize, x * cellSize, cellSize, cellSize);
+    });
+}
+
+function solveMaze(maze, start, end) {
+    let path = [];
+    let visited = Array.from({ length: size }, () => Array(size).fill(false));
+
+    function dfs(x, y) {
+        if (x === end[0] && y === end[1]) return true;
+        visited[x][y] = true;
+        path.push([x, y]);
+        for (let [dx, dy] of shuffle([[1, 0], [0, 1], [-1, 0], [0, -1]])) {
+            let nx = x + dx, ny = y + dy;
+            if (nx > 0 && nx < size && ny > 0 && ny < size && maze[nx][ny] === 0 && !visited[nx][ny]) {
+                if (dfs(nx, ny)) return true;
+            }
+        }
+        path.pop();
+        return false;
+    }
+
+    dfs(start[0], start[1]);
+    return path;
+}
+
+async function animatePath(path, color) {
+    for (let [x, y] of path) {
+        ctx.fillStyle = color;
+        ctx.fillRect(y * cellSize, x * cellSize, cellSize, cellSize);
+        await new Promise(resolve => setTimeout(resolve, 20));
+    }
+}
+
+async function generateAndSolve() {
+    let maze = generateMaze(size);
+    drawMaze(maze);
+
+    await Promise.all(paths.map(({ from, to, color }) => animatePath(solveMaze(maze, corners[from], corners[to]), color)));
+
+    setTimeout(generateAndSolve, 500);
+}
+
+generateAndSolve();
+</script>
+</body>
+</html>
