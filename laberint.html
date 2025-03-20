@@ -27,7 +27,7 @@
         function getQueryParam(name, defaultValue) {
             const params = new URLSearchParams(window.location.search);
             const value = parseInt(params.get(name));
-            return isNaN(value) || value < 21 || value % 2 === 0 ? defaultValue : value;
+            return isNaN(value) || value < 5 || value % 2 === 0 ? defaultValue : value;
         }
 
         const size = getQueryParam("size", 41);
@@ -37,15 +37,15 @@
         canvas.width = size * cellSize;
         canvas.height = size * cellSize;
         let start = [1, 1];
-        
+
         function getRandomCorner(exclude) {
             const corners = [
-                [1, 1], [1, size - 2], 
+                [1, 1], [1, size - 2],
                 [size - 2, 1], [size - 2, size - 2]
             ].filter(corner => !(corner[0] === exclude[0] && corner[1] === exclude[1]));
             return corners[Math.floor(Math.random() * corners.length)];
         }
-        
+
         let end = getRandomCorner(start);
 
         function shuffle(array) {
@@ -61,7 +61,7 @@
             let stack = [start];
             maze[start[0]][start[1]] = 0;
             let directions = [[0, 2], [2, 0], [-2, 0], [0, -2]];
-            
+
             while (stack.length > 0) {
                 let [x, y] = stack[stack.length - 1];
                 let moved = false;
@@ -90,21 +90,96 @@
             }
             ctx.fillStyle = "#27ae60";
             ctx.fillRect(start[1] * cellSize, start[0] * cellSize, cellSize, cellSize);
-            
+
             ctx.fillStyle = "#e74c3c";
             ctx.fillRect(end[1] * cellSize, end[0] * cellSize, cellSize, cellSize);
         }
 
+function animatePath(path) {
+    let i = 0;
+
+    function drawStep() {
+        if (i >= path.length) {
+            start = [...end];
+            end = getRandomCorner(start);
+            setTimeout(generateAndSolve, 2000);
+            return;
+        }
+
+        const [cx, cy] = path[i];
+        const [px, py] = i === 0 ? start : path[i - 1];
+
+        const fromX = py * cellSize + cellSize / 2;
+        const fromY = px * cellSize + cellSize / 2;
+        const toX = cy * cellSize + cellSize / 2;
+        const toY = cx * cellSize + cellSize / 2;
+
+        const deltaX = toX - fromX;
+        const deltaY = toY - fromY;
+
+        let progress = 0;
+        const lineSteps = 8;
+
+        function drawLine() {
+            progress++;
+            const currentX = fromX + (deltaX * progress) / lineSteps;
+            const currentY = fromY + (deltaY * progress) / lineSteps;
+
+            ctx.strokeStyle = "#3498db";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+
+            if (progress < lineSteps) {
+                requestAnimationFrame(drawLine);
+            } else {
+                expandSquare(cx, cy);
+                i++;
+                setTimeout(drawStep, 50);
+            }
+        }
+
+        function expandSquare(x, y) {
+            let expandProgress = 5;
+            const expandSteps = 40;
+
+            function drawSquare() {
+                expandProgress++;
+                const size = (expandProgress / expandSteps) * cellSize;
+                ctx.fillStyle = "#3498db";
+                ctx.fillRect(
+                    y * cellSize + (cellSize - size) / 2,
+                    x * cellSize + (cellSize - size) / 2,
+                    size,
+                    size
+                );
+
+                if (expandProgress < expandSteps) {
+                    setTimeout(drawSquare, 50);
+                }
+            }
+
+            drawSquare();
+        }
+
+        drawLine();
+    }
+
+    drawStep();
+}
+
+
         function solveMaze(maze) {
             let path = [];
             let visited = Array.from({ length: size }, () => Array(size).fill(false));
-            
+
             function dfs(x, y) {
                 if (x === end[0] && y === end[1]) return true;
                 visited[x][y] = true;
                 path.push([x, y]);
-                let directions = shuffle([[1, 0], [0, 1], [-1, 0], [0, -1]]);
-                for (let [dx, dy] of directions) {
+                for (let [dx, dy] of shuffle([[1, 0], [0, 1], [-1, 0], [0, -1]])) {
                     let nx = x + dx, ny = y + dy;
                     if (nx > 0 && nx < size && ny > 0 && ny < size && maze[nx][ny] === 0 && !visited[nx][ny]) {
                         if (dfs(nx, ny)) return true;
@@ -117,31 +192,13 @@
             return path;
         }
 
-        function animatePath(path) {
-            let i = 0;
-            function step() {
-                if (i < path.length) {
-                    let [x, y] = path[i];
-                    ctx.fillStyle = "#3498db";
-                    ctx.fillRect(y * cellSize, x * cellSize, cellSize, cellSize);
-                    i++;
-                    setTimeout(step, 50);
-                } else {
-                    start = [...end];
-                    end = getRandomCorner(start);
-                    setTimeout(generateAndSolve, 200);
-                }
-            }
-            step();
-        }
-
         function generateAndSolve() {
             let maze = generateMaze(size);
             drawMaze(maze);
             let path = solveMaze(maze);
             animatePath(path);
         }
-        
+
         generateAndSolve();
     </script>
 </body>
