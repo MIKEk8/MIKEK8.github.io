@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural XOR Trainer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+        }
+        #app {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .panel {
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .panel h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        td, th {
+            border: solid 1px #ccc;
+            padding: 8px 12px;
+            text-align: center;
+        }
+        th {
+            background: #eee;
+        }
+        .correct {
+            background: #d4edda;
+        }
+        .wrong {
+            background: #f8d7da;
+        }
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.training {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .arch-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        .connections {
+            display: flex;
+            gap: 20px;
+        }
+        .conn-group {
+            flex: 1;
+        }
+        .conn-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .conn {
+            font-family: monospace;
+            padding: 4px 0;
+            font-size: 14px;
+        }
+        .conn.skip, .conn-input.skip {
+            color: #666;
+            font-style: italic;
+        }
+        .conn-input {
+            font-family: monospace;
+            padding: 4px 0;
+            font-size: 14px;
+        }
+        .conn-input input {
+            width: 70px;
+            padding: 4px;
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .custom-results {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="panel">
+            <h3>Обучение</h3>
+            <p>Итерация: <strong>{{ step }}</strong> / {{ maxIterations }}</p>
+            <p>Learning rate: {{ learningRate }}</p>
+            <p :class="['status', converged ? 'success' : 'training']">
+                {{ converged ? 'Сошлось!' : 'Обучение...' }}
+            </p>
+            <p class="arch-info">Архитектура: 1 hidden + skip connections</p>
+        </div>
+
+        <div class="panel">
+            <h3>Предсказания XOR</h3>
+            <table>
+                <tr>
+                    <th>Вход</th>
+                    <th>h</th>
+                    <th>Ожидание</th>
+                    <th>Выход</th>
+                    <th>Ошибка</th>
+                </tr>
+                <tr v-for="p in predictions" :key="p.i1 + '_' + p.i2" :class="p.correct ? 'correct' : 'wrong'">
+                    <td>{{ p.i1 }} ^ {{ p.i2 }}</td>
+                    <td>{{ p.hOut.toFixed(4) }}</td>
+                    <td>{{ p.expected }}</td>
+                    <td>{{ p.output.toFixed(4) }}</td>
+                    <td>{{ p.error.toFixed(4) }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3>Веса сети</h3>
+            <div class="connections">
+                <div class="conn-group">
+                    <div class="conn-label">Hidden</div>
+                    <div class="conn">i1 → h: <strong>{{ weights.hidden.i1.toFixed(3) }}</strong></div>
+                    <div class="conn">i2 → h: <strong>{{ weights.hidden.i2.toFixed(3) }}</strong></div>
+                    <div class="conn">bias: <strong>{{ weights.hidden.b.toFixed(3) }}</strong></div>
+                </div>
+                <div class="conn-group">
+                    <div class="conn-label">Output</div>
+                    <div class="conn">h → out: <strong>{{ weights.out.h.toFixed(3) }}</strong></div>
+                    <div class="conn skip">i1 → out: <strong>{{ weights.out.i1.toFixed(3) }}</strong></div>
+                    <div class="conn skip">i2 → out: <strong>{{ weights.out.i2.toFixed(3) }}</strong></div>
+                    <div class="conn">bias: <strong>{{ weights.out.b.toFixed(3) }}</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Свои веса</h3>
+            <div class="connections">
+                <div class="conn-group">
+                    <div class="conn-label">Hidden</div>
+                    <div class="conn-input">i1 → h: <input type="number" step="0.1" v-model.number="custom.hidden.i1"></div>
+                    <div class="conn-input">i2 → h: <input type="number" step="0.1" v-model.number="custom.hidden.i2"></div>
+                    <div class="conn-input">bias: <input type="number" step="0.1" v-model.number="custom.hidden.b"></div>
+                </div>
+                <div class="conn-group">
+                    <div class="conn-label">Output</div>
+                    <div class="conn-input">h → out: <input type="number" step="0.1" v-model.number="custom.out.h"></div>
+                    <div class="conn-input skip">i1 → out: <input type="number" step="0.1" v-model.number="custom.out.i1"></div>
+                    <div class="conn-input skip">i2 → out: <input type="number" step="0.1" v-model.number="custom.out.i2"></div>
+                    <div class="conn-input">bias: <input type="number" step="0.1" v-model.number="custom.out.b"></div>
+                </div>
+            </div>
+            <button @click="calcCustom">Предсказать</button>
+            <table v-if="customPredictions.length" class="custom-results">
+                <tr>
+                    <th>Вход</th>
+                    <th>h</th>
+                    <th>Ожидание</th>
+                    <th>Выход</th>
+                    <th>Ошибка</th>
+                </tr>
+                <tr v-for="p in customPredictions" :key="'c' + p.i1 + p.i2" :class="p.correct ? 'correct' : 'wrong'">
+                    <td>{{ p.i1 }} ^ {{ p.i2 }}</td>
+                    <td>{{ p.hOut.toFixed(4) }}</td>
+                    <td>{{ p.expected }}</td>
+                    <td>{{ p.output.toFixed(4) }}</td>
+                    <td>{{ p.error.toFixed(4) }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div id="chart"></div>
+
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script>
+        google.charts.load('current', { 'packages': ['annotationchart'] });
+
+        var learningRate = 2;
+        var maxIterations = 5000;
+        var chart, data, options;
+        var timerToRedraw;
+
+        function randomWeight() {
+            return (Math.random() - 0.5) * 2;
+        }
+
+        // 1 hidden neuron + skip connections from inputs to output
+        var hidden = { i1: randomWeight(), i2: randomWeight(), b: randomWeight() };
+        var outWeights = {
+            h: randomWeight(),
+            i1: randomWeight(),
+            i2: randomWeight(),
+            b: randomWeight()
+        };
+
+        var trainingData = [[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]];
+
+        var sigmoid = (x) => 1 / (1 + Math.exp(-x));
+        var sigmoidDerivative = (fx) => fx * (1 - fx);
+
+        var step = 0;
+        var lastErrors = { "00": 0.5, "01": 0.5, "10": 0.5, "11": 0.5 };
+
+        function forward(i1, i2) {
+            var hSum = i1 * hidden.i1 + i2 * hidden.i2 + hidden.b;
+            var hOut = sigmoid(hSum);
+
+            var outSum = hOut * outWeights.h + i1 * outWeights.i1 + i2 * outWeights.i2 + outWeights.b;
+            var output = sigmoid(outSum);
+
+            return { hOut, output };
+        }
+
+        function getPredictions() {
+            var cases = [[0, 0], [0, 1], [1, 0], [1, 1]];
+            return cases.map(([i1, i2]) => {
+                var result = forward(i1, i2);
+                var expected = i1 ^ i2;
+                var error = Math.abs(expected - result.output);
+                return { i1, i2, hOut: result.hOut, expected, output: result.output, error, correct: error < 0.1 };
+            });
+        }
+
+        function drawChart() {
+            var errors = Object.values(lastErrors);
+            var avg = errors.reduce((sum, e) => sum + e, 0) / 4;
+            data.addRow([new Date(step), errors[0], errors[1], errors[2], errors[3], avg]);
+
+            if (timerToRedraw) clearTimeout(timerToRedraw);
+            timerToRedraw = setTimeout(() => chart.draw(data, options), 200);
+        }
+
+        function learn() {
+            // Batch training: accumulate gradients over all 4 examples
+            var hGrads = { i1: 0, i2: 0, b: 0 };
+            var outGrads = { h: 0, i1: 0, i2: 0, b: 0 };
+
+            for (var t = 0; t < trainingData.length; t++) {
+                var [i1, i2, expected] = trainingData[t];
+                var { hOut, output } = forward(i1, i2);
+
+                var outputError = expected - output;
+                var outputDelta = sigmoidDerivative(output) * outputError;
+
+                // Output layer gradients (including skip connections)
+                outGrads.b += outputDelta;
+                outGrads.h += outputDelta * hOut;
+                outGrads.i1 += outputDelta * i1;
+                outGrads.i2 += outputDelta * i2;
+
+                // Hidden layer gradients
+                var hError = outputDelta * outWeights.h;
+                var hDelta = sigmoidDerivative(hOut) * hError;
+                hGrads.b += hDelta;
+                hGrads.i1 += hDelta * i1;
+                hGrads.i2 += hDelta * i2;
+
+                lastErrors[`${i1}${i2}`] = Math.abs(outputError);
+            }
+
+            // Apply gradients
+            outWeights.b += learningRate * outGrads.b;
+            outWeights.h += learningRate * outGrads.h;
+            outWeights.i1 += learningRate * outGrads.i1;
+            outWeights.i2 += learningRate * outGrads.i2;
+            hidden.b += learningRate * hGrads.b;
+            hidden.i1 += learningRate * hGrads.i1;
+            hidden.i2 += learningRate * hGrads.i2;
+
+            step++;
+
+            if (step % 4 === 0) {
+                drawChart();
+                updateVue();
+            }
+
+            var predictions = getPredictions();
+            return predictions.every(p => p.error < 0.1);
+        }
+
+        function getWeightsForVue() {
+            return {
+                hidden: { i1: hidden.i1, i2: hidden.i2, b: hidden.b },
+                out: { h: outWeights.h, i1: outWeights.i1, i2: outWeights.i2, b: outWeights.b }
+            };
+        }
+
+        function updateVue() {
+            app.step = step;
+            app.weights = getWeightsForVue();
+            app.predictions = getPredictions();
+            app.converged = app.predictions.every(p => p.correct);
+        }
+
+        function initChart() {
+            data = new google.visualization.DataTable();
+            data.addColumn('date', 'Итерация');
+            data.addColumn('number', '0^0');
+            data.addColumn('number', '0^1');
+            data.addColumn('number', '1^0');
+            data.addColumn('number', '1^1');
+            data.addColumn('number', 'Среднее');
+
+            options = {
+                width: document.body.clientWidth - 30,
+                height: 400,
+                displayAnnotations: false,
+                legend: { position: 'top' },
+                vAxis: { viewWindow: { min: -1, max: 1 } }
+            };
+
+            chart = new google.visualization.AnnotationChart(document.getElementById('chart'));
+
+            for (var i = 0; i < maxIterations; i++) {
+                if (learn()) break;
+            }
+
+            updateVue();
+        }
+
+        google.charts.setOnLoadCallback(initChart);
+
+        function forwardCustom(i1, i2, h, out) {
+            var hSum = i1 * h.i1 + i2 * h.i2 + h.b;
+            var hOut = sigmoid(hSum);
+            var outSum = hOut * out.h + i1 * out.i1 + i2 * out.i2 + out.b;
+            return { hOut, output: sigmoid(outSum) };
+        }
+
+        var app = new Vue({
+            el: '#app',
+            data: {
+                step: 0,
+                learningRate: learningRate,
+                maxIterations: maxIterations,
+                converged: false,
+                weights: getWeightsForVue(),
+                predictions: getPredictions(),
+                custom: {
+                    hidden: { i1: 0, i2: 0, b: 0 },
+                    out: { h: 0, i1: 0, i2: 0, b: 0 }
+                },
+                customPredictions: []
+            },
+            methods: {
+                calcCustom: function() {
+                    var cases = [[0, 0], [0, 1], [1, 0], [1, 1]];
+                    this.customPredictions = cases.map(([i1, i2]) => {
+                        var result = forwardCustom(i1, i2, this.custom.hidden, this.custom.out);
+                        var expected = i1 ^ i2;
+                        var error = Math.abs(expected - result.output);
+                        return { i1, i2, hOut: result.hOut, expected, output: result.output, error, correct: error < 0.1 };
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
