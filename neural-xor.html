@@ -111,6 +111,10 @@
         .custom-results {
             margin-top: 15px;
         }
+        .lr-range {
+            color: #999;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -118,7 +122,7 @@
         <div class="panel">
             <h3>Обучение</h3>
             <p>Итерация: <strong>{{ step }}</strong> / {{ maxIterations }}</p>
-            <p>Learning rate: {{ learningRate }}</p>
+            <p>Learning rate: {{ learningRate.toFixed(2) }} <span class="lr-range">({{ minLR }}-{{ maxLR }})</span></p>
             <p :class="['status', converged ? 'success' : 'training']">
                 {{ converged ? 'Сошлось!' : 'Обучение...' }}
             </p>
@@ -206,10 +210,14 @@
     <script src="https://www.gstatic.com/charts/loader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
     <script>
-        google.charts.load('current', { 'packages': ['annotationchart'] });
+        google.charts.load('current', { 'packages': ['corechart'] });
 
-        var learningRate = 2;
+        var learningRate = 5;
+        var minLR = 0.5;
+        var maxLR = 20;
         var maxIterations = 5000;
+        var errorHistory = [];
+        var historySize = 20;
         var chart, data, options;
         var timerToRedraw;
 
@@ -257,7 +265,7 @@
         function drawChart() {
             var errors = Object.values(lastErrors);
             var avg = errors.reduce((sum, e) => sum + e, 0) / 4;
-            data.addRow([new Date(step), errors[0], errors[1], errors[2], errors[3], avg]);
+            data.addRow([step, errors[0], errors[1], errors[2], errors[3], avg, learningRate / maxLR]);
 
             if (timerToRedraw) clearTimeout(timerToRedraw);
             timerToRedraw = setTimeout(() => chart.draw(data, options), 200);
@@ -302,12 +310,43 @@
 
             step++;
 
+            var predictions = getPredictions();
+            var avgError = predictions.reduce((sum, p) => sum + p.error, 0) / 4;
+
+            // Track error history
+            errorHistory.push(avgError);
+            if (errorHistory.length > historySize) {
+                errorHistory.shift();
+            }
+
+            // Adaptive learning rate based on oscillation detection
+            if (errorHistory.length >= historySize) {
+                // Detect oscillations: count sign changes in error differences
+                var signChanges = 0;
+                var lastDiff = errorHistory[1] - errorHistory[0];
+                for (var i = 2; i < errorHistory.length; i++) {
+                    var diff = errorHistory[i] - errorHistory[i - 1];
+                    if ((diff > 0 && lastDiff < 0) || (diff < 0 && lastDiff > 0)) {
+                        signChanges++;
+                    }
+                    lastDiff = diff;
+                }
+                var oscillationRatio = signChanges / (errorHistory.length - 2);
+
+                // If oscillating (>60% sign changes), decrease LR
+                if (oscillationRatio > 0.6) {
+                    learningRate = Math.max(minLR, learningRate * 0.8);
+                } else if (avgError < 0.1) {
+                    // Close to goal - fine tune
+                    learningRate = Math.max(minLR, learningRate * 0.95);
+                }
+            }
+
             if (step % 4 === 0) {
                 drawChart();
                 updateVue();
             }
 
-            var predictions = getPredictions();
             return predictions.every(p => p.error < 0.1);
         }
 
@@ -320,6 +359,7 @@
 
         function updateVue() {
             app.step = step;
+            app.learningRate = learningRate;
             app.weights = getWeightsForVue();
             app.predictions = getPredictions();
             app.converged = app.predictions.every(p => p.correct);
@@ -327,22 +367,27 @@
 
         function initChart() {
             data = new google.visualization.DataTable();
-            data.addColumn('date', 'Итерация');
+            data.addColumn('number', 'Итерация');
             data.addColumn('number', '0^0');
             data.addColumn('number', '0^1');
             data.addColumn('number', '1^0');
             data.addColumn('number', '1^1');
             data.addColumn('number', 'Среднее');
+            data.addColumn('number', 'LR');
 
             options = {
                 width: document.body.clientWidth - 30,
                 height: 400,
-                displayAnnotations: false,
                 legend: { position: 'top' },
-                vAxis: { viewWindow: { min: -1, max: 1 } }
+                hAxis: { title: 'Итерация' },
+                vAxis: { title: 'Ошибка / LR', viewWindow: { min: 0, max: 1 } },
+                curveType: 'function',
+                series: {
+                    5: { lineDashStyle: [4, 4], color: '#888' }  // LR - dashed gray
+                }
             };
 
-            chart = new google.visualization.AnnotationChart(document.getElementById('chart'));
+            chart = new google.visualization.LineChart(document.getElementById('chart'));
 
             for (var i = 0; i < maxIterations; i++) {
                 if (learn()) break;
@@ -365,6 +410,8 @@
             data: {
                 step: 0,
                 learningRate: learningRate,
+                minLR: minLR,
+                maxLR: maxLR,
                 maxIterations: maxIterations,
                 converged: false,
                 weights: getWeightsForVue(),
