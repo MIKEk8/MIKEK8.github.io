@@ -43,7 +43,7 @@
         data.addRow(lv);
 
         if (timer_to_redraw) clearTimeout(timer_to_redraw);
-        timer_to_redraw = setTimeout(() => chart.draw(data, google.charts.Line.convertOptions(options)), 200);
+        timer_to_redraw = setTimeout(() => chart.draw(data, options), 200);
     }
 
     function learn(rd = null) {
